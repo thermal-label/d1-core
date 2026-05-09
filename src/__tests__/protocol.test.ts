@@ -115,22 +115,46 @@ describe('buildPrinterStream', () => {
 
   it('uses bytes-per-line from media.printableDots', () => {
     const bitmap = makeBitmap(8, 10);
-    const cases: { media: D1Media; rasterDots: number; bytesPerLine: number }[] = [
-      { media: MEDIA_6MM_BW, rasterDots: 32, bytesPerLine: 4 },
-      { media: MEDIA_12MM_BW, rasterDots: 64, bytesPerLine: 8 },
+    const cases: {
+      media: D1Media;
+      rasterDots: number;
+      bytesPerLine: number;
+      // Bytes prepended for `ESC B N` when raster < head. ENGINE has
+      // headDots=64; 6mm tape (32 dots) → ESC B 2 → 3 bytes.
+      escBBytes: number;
+      expectedDotTab: number | null;
+    }[] = [
+      { media: MEDIA_6MM_BW, rasterDots: 32, bytesPerLine: 4, escBBytes: 3, expectedDotTab: 2 },
+      { media: MEDIA_12MM_BW, rasterDots: 64, bytesPerLine: 8, escBBytes: 0, expectedDotTab: null },
     ];
 
-    for (const { media, rasterDots, bytesPerLine } of cases) {
+    for (const { media, rasterDots, bytesPerLine, escBBytes, expectedDotTab } of cases) {
       const stream = buildPrinterStream(bitmap, ENGINE, {}, media);
       const scaledFeed = Math.round(10 * (rasterDots / 8));
 
-      const contentDOffset = 3 + 3 + FEED_MARGIN_PX;
+      // ESC B N (when present) follows ESC C n directly, before the
+      // leading-skip ESC D 0.
+      if (expectedDotTab !== null) {
+        expect(stream[3]).toBe(0x1b);
+        expect(stream[4]).toBe(0x42);
+        expect(stream[5]).toBe(expectedDotTab);
+      }
+
+      const contentDOffset = 3 + escBBytes + 3 + FEED_MARGIN_PX;
       expect(stream[contentDOffset]).toBe(0x1b);
       expect(stream[contentDOffset + 1]).toBe(0x44);
       expect(stream[contentDOffset + 2]).toBe(bytesPerLine);
 
       expect(stream).toHaveLength(
-        3 + 3 + FEED_MARGIN_PX + 3 + scaledFeed * (1 + bytesPerLine) + 3 + FEED_MARGIN_PX + 2,
+        3 +
+          escBBytes +
+          3 +
+          FEED_MARGIN_PX +
+          3 +
+          scaledFeed * (1 + bytesPerLine) +
+          3 +
+          FEED_MARGIN_PX +
+          2,
       );
     }
   });

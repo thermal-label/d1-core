@@ -132,10 +132,33 @@ export function buildPrinterStream(
   );
   const bytesPerLine = Math.ceil(rasterDots / 8);
 
+  // `ESC B N` — Dot Tab. Horizontal print offset measured in
+  // bytes (1 byte = 8 dot pixels). Sits between `ESC C` and
+  // `ESC D`. Centres the raster on the head when the content
+  // is narrower than the head's full dot count: a 12 mm tape
+  // (64 dots printable) on a 128-dot Duo head wants `ESC B 4`,
+  // shifting content from head pixel 32 — putting the 64-dot
+  // raster squarely in the middle of the 128-dot head, aligned
+  // with the centred-on-head tape. LM standalone (head ==
+  // raster) gets `dotTab = 0` and the command is suppressed.
+  //
+  // Spec: LW 450 Series Tech Ref, ESC B section. Max value =
+  // (engine.headDots / 8) - 1; clamp defensively. Granularity
+  // is 8 pixels — for typical bands this rounds to a whole byte
+  // exactly (e.g. 64-dot raster on 128-dot head → 32 unused
+  // pixels each side → exactly 4 bytes).
+  const headExcessBytes = Math.max(0, Math.floor((engine.headDots - rasterDots) / 16));
+  const maxDotTab = Math.max(0, Math.floor(engine.headDots / 8) - 1);
+  const dotTab = Math.min(headExcessBytes, maxDotTab);
+
   const chunks: number[] = [];
 
   for (let i = 0; i < copies; i += 1) {
     chunks.push(0x1b, 0x43, tapeType); // ESC C n — tape type / palette
+
+    if (dotTab > 0) {
+      chunks.push(0x1b, 0x42, dotTab); // ESC B N — horizontal offset
+    }
 
     if (leadingSkipLines > 0) {
       chunks.push(0x1b, 0x44, 0x00); // ESC D 0 — zero bytes-per-line
