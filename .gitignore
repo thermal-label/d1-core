@@ -6,3 +6,7 @@ coverage
 .vscode
 .idea
 .claude
+
+# Build artifacts emitted by scripts/compile-data.mjs
+data/media.json
+src/media.generated.ts
