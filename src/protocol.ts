@@ -8,6 +8,26 @@ import type { D1Media, D1PrintOptions } from './types.js';
 import { TAPE_TYPE_MAX, tapeTypeFor } from './tape-type.js';
 
 /**
+ * D1 wire-protocol byte constants.
+ *
+ * `ESC` is the command prefix; opcodes that follow it (`A` start /
+ * status query, `B` dot tab, `C` tape type, `D` bytes-per-line, `E`
+ * cut) take their letters straight from the LW 450 Tech Ref. `SYN`
+ * is the row-data prefix — one SYN per dot row, followed by
+ * bytes-per-line payload bytes (or zero payload bytes when used as
+ * a bare feed against `ESC D 0`).
+ */
+const D1 = {
+  ESC: 0x1b,
+  SYN: 0x16,
+  START: 0x41, // ESC A — start / status query
+  DOT_TAB: 0x42, // ESC B — horizontal print offset (bytes)
+  TAPE_TYPE: 0x43, // ESC C — tape-type / palette selector
+  BYTES_PER_LINE: 0x44, // ESC D — bytes-per-line for following SYN rows
+  CUT: 0x45, // ESC E — autocut (autocut chassis only)
+} as const;
+
+/**
  * Convert a millimetre value to dot count at the given DPI.
  *
  * Rounds half-away-from-zero so values land on the same integer dot
@@ -158,32 +178,33 @@ export function buildPrinterStream(
   const chunks: number[] = [];
 
   for (let i = 0; i < copies; i += 1) {
-    chunks.push(0x1b, 0x43, tapeType); // ESC C n — tape type / palette
+    chunks.push(D1.ESC, D1.TAPE_TYPE, tapeType);
 
-    chunks.push(0x1b, 0x42, dotTab); // ESC B N — horizontal offset (always emitted; reset firmware default)
+    // Always emitted (including dotTab=0) — see ESC B note above.
+    chunks.push(D1.ESC, D1.DOT_TAB, dotTab);
 
     if (leadingSkipLines > 0) {
-      chunks.push(0x1b, 0x44, 0x00); // ESC D 0 — zero bytes-per-line
-      for (let n = 0; n < leadingSkipLines; n += 1) chunks.push(0x16);
+      chunks.push(D1.ESC, D1.BYTES_PER_LINE, 0x00);
+      for (let n = 0; n < leadingSkipLines; n += 1) chunks.push(D1.SYN);
     }
 
-    chunks.push(0x1b, 0x44, bytesPerLine); // ESC D N — bytes per line for content
+    chunks.push(D1.ESC, D1.BYTES_PER_LINE, bytesPerLine);
 
     for (let y = 0; y < scaled.heightPx; y += 1) {
       const row = getRow(scaled, y);
-      chunks.push(0x16, ...Array.from(row)); // SYN + row bytes
+      chunks.push(D1.SYN, ...Array.from(row));
     }
 
     if (trailingSkipLines > 0) {
-      chunks.push(0x1b, 0x44, 0x00); // ESC D 0 — zero bytes-per-line
-      for (let n = 0; n < trailingSkipLines; n += 1) chunks.push(0x16);
+      chunks.push(D1.ESC, D1.BYTES_PER_LINE, 0x00);
+      for (let n = 0; n < trailingSkipLines; n += 1) chunks.push(D1.SYN);
     }
 
     if (autocut) {
-      chunks.push(0x1b, 0x45); // ESC E — cut (autocut chassis only)
+      chunks.push(D1.ESC, D1.CUT);
     }
 
-    chunks.push(0x1b, 0x41); // ESC A — status query
+    chunks.push(D1.ESC, D1.START);
   }
 
   return new Uint8Array(chunks);
