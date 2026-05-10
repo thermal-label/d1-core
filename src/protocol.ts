@@ -139,8 +139,12 @@ export function buildPrinterStream(
   // (64 dots printable) on a 128-dot Duo head wants `ESC B 4`,
   // shifting content from head pixel 32 — putting the 64-dot
   // raster squarely in the middle of the 128-dot head, aligned
-  // with the centred-on-head tape. LM standalone (head ==
-  // raster) gets `dotTab = 0` and the command is suppressed.
+  // with the centred-on-head tape.
+  //
+  // ESC B is always emitted (including dotTab=0). Bench evidence:
+  // standalone LM (head==raster, computed dotTab=0) printed shifted
+  // right when ESC B was suppressed — the firmware retained a
+  // non-zero default margin. Sending `ESC B 0` explicitly resets it.
   //
   // Spec: LW 450 Series Tech Ref, ESC B section. Max value =
   // (engine.headDots / 8) - 1; clamp defensively. Granularity
@@ -156,9 +160,7 @@ export function buildPrinterStream(
   for (let i = 0; i < copies; i += 1) {
     chunks.push(0x1b, 0x43, tapeType); // ESC C n — tape type / palette
 
-    if (dotTab > 0) {
-      chunks.push(0x1b, 0x42, dotTab); // ESC B N — horizontal offset
-    }
+    chunks.push(0x1b, 0x42, dotTab); // ESC B N — horizontal offset (always emitted; reset firmware default)
 
     if (leadingSkipLines > 0) {
       chunks.push(0x1b, 0x44, 0x00); // ESC D 0 — zero bytes-per-line

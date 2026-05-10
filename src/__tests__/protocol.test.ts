@@ -74,6 +74,7 @@ describe('buildPrinterStream', () => {
 
     const expectedLength =
       3 + // ESC C 0
+      3 + // ESC B 0 (always emitted; resets firmware default dotTab)
       3 +
       FEED_MARGIN_PX + // leading: ESC D 0 + 57×SYN
       3 + // ESC D 8
@@ -88,14 +89,19 @@ describe('buildPrinterStream', () => {
     expect(stream[1]).toBe(0x43);
     expect(stream[2]).toBe(0x00);
 
+    // ESC B 0 — explicit dotTab reset.
     expect(stream[3]).toBe(0x1b);
-    expect(stream[4]).toBe(0x44);
+    expect(stream[4]).toBe(0x42);
     expect(stream[5]).toBe(0x00);
+
+    expect(stream[6]).toBe(0x1b);
+    expect(stream[7]).toBe(0x44);
+    expect(stream[8]).toBe(0x00);
     for (let i = 0; i < FEED_MARGIN_PX; i += 1) {
-      expect(stream[6 + i]).toBe(0x16);
+      expect(stream[9 + i]).toBe(0x16);
     }
 
-    const contentDOffset = 6 + FEED_MARGIN_PX;
+    const contentDOffset = 9 + FEED_MARGIN_PX;
     expect(stream[contentDOffset]).toBe(0x1b);
     expect(stream[contentDOffset + 1]).toBe(0x44);
     expect(stream[contentDOffset + 2]).toBe(8);
@@ -115,39 +121,35 @@ describe('buildPrinterStream', () => {
 
   it('uses bytes-per-line from media.printableDots', () => {
     const bitmap = makeBitmap(8, 10);
+    // ESC B is always emitted (3 bytes), even at dotTab=0 — the
+    // firmware retains a non-zero default margin otherwise.
     const cases: {
       media: D1Media;
       rasterDots: number;
       bytesPerLine: number;
-      // Bytes prepended for `ESC B N` when raster < head. ENGINE has
-      // headDots=64; 6mm tape (32 dots) → ESC B 2 → 3 bytes.
-      escBBytes: number;
-      expectedDotTab: number | null;
+      expectedDotTab: number;
     }[] = [
-      { media: MEDIA_6MM_BW, rasterDots: 32, bytesPerLine: 4, escBBytes: 3, expectedDotTab: 2 },
-      { media: MEDIA_12MM_BW, rasterDots: 64, bytesPerLine: 8, escBBytes: 0, expectedDotTab: null },
+      { media: MEDIA_6MM_BW, rasterDots: 32, bytesPerLine: 4, expectedDotTab: 2 },
+      { media: MEDIA_12MM_BW, rasterDots: 64, bytesPerLine: 8, expectedDotTab: 0 },
     ];
 
-    for (const { media, rasterDots, bytesPerLine, escBBytes, expectedDotTab } of cases) {
+    for (const { media, rasterDots, bytesPerLine, expectedDotTab } of cases) {
       const stream = buildPrinterStream(bitmap, ENGINE, {}, media);
       const scaledFeed = Math.round(10 * (rasterDots / 8));
 
-      // ESC B N (when present) follows ESC C n directly, before the
-      // leading-skip ESC D 0.
-      if (expectedDotTab !== null) {
-        expect(stream[3]).toBe(0x1b);
-        expect(stream[4]).toBe(0x42);
-        expect(stream[5]).toBe(expectedDotTab);
-      }
+      // ESC B N follows ESC C n directly, before the leading-skip ESC D 0.
+      expect(stream[3]).toBe(0x1b);
+      expect(stream[4]).toBe(0x42);
+      expect(stream[5]).toBe(expectedDotTab);
 
-      const contentDOffset = 3 + escBBytes + 3 + FEED_MARGIN_PX;
+      const contentDOffset = 3 + 3 + 3 + FEED_MARGIN_PX;
       expect(stream[contentDOffset]).toBe(0x1b);
       expect(stream[contentDOffset + 1]).toBe(0x44);
       expect(stream[contentDOffset + 2]).toBe(bytesPerLine);
 
       expect(stream).toHaveLength(
         3 +
-          escBBytes +
+          3 + // ESC B
           3 +
           FEED_MARGIN_PX +
           3 +
@@ -169,11 +171,15 @@ describe('buildPrinterStream', () => {
     const bitmap = makeBitmap(64, 64);
     const stream = buildPrinterStream(bitmap, bareEngine);
 
-    expect(stream).toHaveLength(3 + 3 + 64 * 9 + 2);
+    // ESC C 0 + ESC B 0 + ESC D 8 + (SYN + 8 bytes) × 64 + ESC A.
+    expect(stream).toHaveLength(3 + 3 + 3 + 64 * 9 + 2);
     expect(stream[3]).toBe(0x1b);
-    expect(stream[4]).toBe(0x44);
-    expect(stream[5]).toBe(8);
-    expect(stream[6]).toBe(0x16);
+    expect(stream[4]).toBe(0x42);
+    expect(stream[5]).toBe(0x00);
+    expect(stream[6]).toBe(0x1b);
+    expect(stream[7]).toBe(0x44);
+    expect(stream[8]).toBe(8);
+    expect(stream[9]).toBe(0x16);
   });
 
   it('omits skip-line blocks when leading + trailing are zero', () => {
@@ -186,11 +192,14 @@ describe('buildPrinterStream', () => {
     const bitmap = makeBitmap(64, 64);
     const stream = buildPrinterStream(bitmap, bareEngine, {}, MEDIA_12MM_BW);
 
-    expect(stream).toHaveLength(3 + 3 + 64 * 9 + 2);
+    expect(stream).toHaveLength(3 + 3 + 3 + 64 * 9 + 2);
     expect(stream[3]).toBe(0x1b);
-    expect(stream[4]).toBe(0x44);
-    expect(stream[5]).toBe(8);
-    expect(stream[6]).toBe(0x16);
+    expect(stream[4]).toBe(0x42);
+    expect(stream[5]).toBe(0x00);
+    expect(stream[6]).toBe(0x1b);
+    expect(stream[7]).toBe(0x44);
+    expect(stream[8]).toBe(8);
+    expect(stream[9]).toBe(0x16);
   });
 
   it('reads leading pad from engine.printableArea and trailing from forcedTrailingFeedMm', () => {
@@ -205,7 +214,8 @@ describe('buildPrinterStream', () => {
     const bitmap = makeBitmap(64, 64);
     const stream = buildPrinterStream(bitmap, asymEngine, {}, MEDIA_12MM_BW);
 
-    expect(stream).toHaveLength(3 + 3 + leadingDots + 3 + 64 * 9 + 3 + trailingDots + 2);
+    // 3 (ESC C) + 3 (ESC B) + 3 + leading + 3 (ESC D content) + content + 3 + trailing + 2
+    expect(stream).toHaveLength(3 + 3 + 3 + leadingDots + 3 + 64 * 9 + 3 + trailingDots + 2);
   });
 
   it('repeats the per-copy block for copies > 1', () => {
@@ -297,8 +307,9 @@ describe('buildPrinterStream', () => {
     const bitmap = makeBitmap(32, 8);
     const stream = buildPrinterStream(bitmap, narrowEngine, {}, MEDIA_12MM_BW);
 
-    expect(stream[3]).toBe(0x1b);
-    expect(stream[4]).toBe(0x44);
-    expect(stream[5]).toBe(4);
+    // ESC C, then ESC B (always emitted), then ESC D bytesPerLine.
+    expect(stream[6]).toBe(0x1b);
+    expect(stream[7]).toBe(0x44);
+    expect(stream[8]).toBe(4);
   });
 });
