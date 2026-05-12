@@ -86,7 +86,7 @@ function resolveTapeType(options: D1PrintOptions, media: D1Media | undefined): n
  * `ESC D 0 + N × SYN` — bare SYN bytes feed one dot row each with
  * zero payload, so trailing/leading advance costs 1 byte per dot row
  * instead of `1 + bytesPerLine` for a padded blank row. Prior art:
- * labelle's `LabelMaker._skip_lines` ("MLF" pattern).
+ * labelle's `LabelMaker._skip_lines`.
  */
 function prepareForEmission(
   bitmap: LabelBitmap,

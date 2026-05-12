@@ -11,8 +11,12 @@ shared cassette catalogue so both drivers stay byte-for-byte aligned.
 
 ## Pages
 
-- [D1 tape protocol](./protocol) — wire format, opcode reference,
-  USB topology, mode-switch, status, transport split.
+- [D1 tape protocol](./protocol) — opcode vocabulary, job structure,
+  and the per-opcode wire reference.
+- [Chassis and USB topology](./topology) — devices, interfaces,
+  mode-switch, head geometry, WebUSB.
+- [API reference](./api/README) — TypeDoc-generated reference for the
+  `@thermal-label/d1-core` package.
 
 ## API surface
 
