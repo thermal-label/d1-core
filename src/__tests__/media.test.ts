@@ -20,12 +20,12 @@ describe('D1 catalogue invariants', () => {
   it('every entry carries the catalogue-required fields', () => {
     for (const m of D1_MEDIA_LIST) {
       expect(m.id, m.name).toBeTypeOf('string');
-      expect(m.type, m.id).toBe('tape');
-      expect(m.tapeWidthMm, m.id).toBeTypeOf('number');
-      expect(m.printableDots, m.id).toBeTypeOf('number');
-      expect(m.bytesPerLine, m.id).toBe(Math.ceil((m.printableDots ?? 0) / 8));
-      expect(m.text, m.id).toBeTypeOf('string');
-      expect(m.background, m.id).toBeTypeOf('string');
+      expect(m.type, String(m.id)).toBe('tape');
+      expect(m.tapeWidthMm, String(m.id)).toBeTypeOf('number');
+      expect(m.printableDots, String(m.id)).toBeTypeOf('number');
+      expect(m.bytesPerLine, String(m.id)).toBe(Math.ceil((m.printableDots ?? 0) / 8));
+      expect(m.text, String(m.id)).toBeTypeOf('string');
+      expect(m.background, String(m.id)).toBeTypeOf('string');
     }
   });
 
@@ -41,11 +41,11 @@ describe('D1 catalogue invariants', () => {
   it('tape-width tiers map to expected targetModels', () => {
     for (const m of D1_MEDIA_LIST) {
       if (m.tapeWidthMm === 24) {
-        expect(m.targetModels, m.id).toEqual(['d1-24']);
+        expect(m.targetModels, String(m.id)).toEqual(['d1-24']);
       } else if (m.tapeWidthMm === 19) {
-        expect(m.targetModels, m.id).toEqual(['d1-wide']);
+        expect(m.targetModels, String(m.id)).toEqual(['d1-wide']);
       } else {
-        expect(m.targetModels, m.id).toEqual(['d1']);
+        expect(m.targetModels, String(m.id)).toEqual(['d1']);
       }
     }
   });

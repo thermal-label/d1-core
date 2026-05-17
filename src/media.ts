@@ -13,7 +13,11 @@ export type { D1MediaKey };
  */
 export function findD1MediaByTapeWidth(tapeWidthMm: number): D1Media | undefined {
   return D1_MEDIA_LIST.find(
-    m => m.tapeWidthMm === tapeWidthMm && m.material === 'standard' && m.text === 'black' && m.background === 'white',
+    m =>
+      m.tapeWidthMm === tapeWidthMm &&
+      m.material === 'standard' &&
+      m.text === 'black' &&
+      m.background === 'white',
   );
 }
 

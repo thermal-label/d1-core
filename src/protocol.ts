@@ -144,12 +144,11 @@ export function buildPrinterStream(
   const tapeType = resolveTapeType(options, media);
   const autocut = engine.capabilities?.autocut === true;
 
-  const { bitmap: scaled, leadingSkipLines, trailingSkipLines } = prepareForEmission(
-    bitmap,
-    rasterDots,
-    engine,
-    media,
-  );
+  const {
+    bitmap: scaled,
+    leadingSkipLines,
+    trailingSkipLines,
+  } = prepareForEmission(bitmap, rasterDots, engine, media);
   const bytesPerLine = Math.ceil(rasterDots / 8);
 
   // `ESC B N` — Dot Tab. Horizontal print offset measured in
