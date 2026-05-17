@@ -1,6 +1,6 @@
 {
   "name": "@thermal-label/d1-core",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Shared D1 tape-protocol encoder, status parser, and tape-type table for the LabelManager and LabelWriter Duo (tape side) drivers.",
   "keywords": [
     "thermal-label",
@@ -33,6 +33,7 @@
   ],
   "files": [
     "dist",
+    "data/media.json",
     "README.md"
   ],
   "publishConfig": {
