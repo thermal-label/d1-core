@@ -34,9 +34,3 @@ shared cassette catalogue so both drivers stay byte-for-byte aligned.
   -non-adhesive). 24 mm Standard included for the 128-dot Duo tier.
   Missing: 24 mm Rhino, Self-Laminating Rhino — pending authoritative
   SKU sources.
-
-## Status
-
-Pre-publish. Driver repos consume via `link:../d1-core` overrides
-while the API stabilises. Will be published to npm with the first
-stable release of the consuming drivers.
