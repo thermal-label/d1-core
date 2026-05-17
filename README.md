@@ -1,5 +1,10 @@
 # @thermal-label/d1-core
 
+[![npm version](https://img.shields.io/npm/v/@thermal-label/d1-core.svg)](https://www.npmjs.com/package/@thermal-label/d1-core)
+[![CI](https://github.com/thermal-label/d1-core/actions/workflows/ci.yml/badge.svg)](https://github.com/thermal-label/d1-core/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/thermal-label/d1-core/branch/main/graph/badge.svg)](https://codecov.io/gh/thermal-label/d1-core)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
 Shared **D1 tape protocol** primitives — wire-format encoder, status-byte
 parser, and tape-type / colour-palette tables — for the
 [DYMO LabelManager](https://github.com/thermal-label/labelmanager) and
